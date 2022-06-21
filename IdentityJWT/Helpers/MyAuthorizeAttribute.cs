@@ -9,6 +9,15 @@ namespace IdentityJWT.Helpers
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class MyAuthorizeAttribute : Attribute, IAuthorizationFilter
     {
+        //public MyAuthorizeAttribute(string Role)
+        //{
+            
+        //}
+
+        public MyAuthorizeAttribute()
+        {
+            
+        }
         public void OnAuthorization(AuthorizationFilterContext context)
         {
             var user = context.HttpContext.User;

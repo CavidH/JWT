@@ -21,6 +21,7 @@ namespace IdentityJWT.Controllers
         {
             _context = context;
         }
+       // [MyAuthorize("Admin")]
         [MyAuthorize]
         [HttpGet]
         public async Task<IEnumerable<Product>> Get()
