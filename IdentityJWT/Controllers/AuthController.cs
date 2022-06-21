@@ -41,7 +41,7 @@
 
             private string GenerateJWtToken(AppUser user)
             {
-                var c = _configuration["Jwt:SigninKey"];
+               // var c = _configuration["Jwt:SigninKey"];
                 var tokenhandler = new JwtSecurityTokenHandler();
                 var key = Encoding.ASCII.GetBytes(_configuration["Jwt:SigninKey"]);
                 var tokenDescriptor = new SecurityTokenDescriptor()

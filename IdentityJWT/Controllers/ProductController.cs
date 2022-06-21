@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using IdentityJWT.DAL;
+using IdentityJWT.Helpers;
 using IdentityJWT.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ namespace IdentityJWT.Controllers
         {
             _context = context;
         }
+        [MyAuthorize]
         [HttpGet]
         public async Task<IEnumerable<Product>> Get()
         {
