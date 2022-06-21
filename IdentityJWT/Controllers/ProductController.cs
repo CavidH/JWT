@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using IdentityJWT.DAL;
 using IdentityJWT.Helpers;
 using IdentityJWT.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,9 +23,12 @@ namespace IdentityJWT.Controllers
         {
             _context = context;
         }
-       // [MyAuthorize("Admin")]
-        [MyAuthorize]
+
+
+        // [MyAuthorize("Admin")]
+        //[MyAuthorize]
         [HttpGet]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IEnumerable<Product>> Get()
         {
             var user = HttpContext.User;

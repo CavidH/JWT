@@ -10,12 +10,15 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using IdentityJWT.DAL;
 using IdentityJWT.Middlewares;
 using IdentityJWT.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityJWT
 {
@@ -38,6 +41,10 @@ namespace IdentityJWT
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "IdentityJWT", Version = "v1" });
             });
 
+
+
+
+
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseNpgsql(Configuration.GetConnectionString("Default"));
@@ -47,6 +54,9 @@ namespace IdentityJWT
             services.AddIdentity<AppUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
+
+
+
 
             services.Configure<IdentityOptions>(options =>
             {
@@ -67,6 +77,21 @@ namespace IdentityJWT
                 options.SignIn.RequireConfirmedEmail = false; //Kayıt olduktan email ile token gönderecek 
                 options.SignIn.RequireConfirmedPhoneNumber = false; //telefon doğrulaması
             });
+            
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = "example.com",
+                          ValidAudience = "example.com",
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:SigninKey"]))
+                    };
+                });
 
 
         }
@@ -85,7 +110,7 @@ namespace IdentityJWT
 
             app.UseRouting();
 
-            app.UseMiddleware<JWTMiddleware>();
+            // app.UseMiddleware<JWTMiddleware>();
 
             app.UseAuthentication();
             app.UseAuthorization();
