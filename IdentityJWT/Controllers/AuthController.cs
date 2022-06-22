@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Data.Helpers;
+using IdentityJWT.DAL;
 using IdentityJWT.Models;
 using IdentityJWT.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -24,64 +25,90 @@ namespace IdentityJWT.Controllers
         private UserManager<AppUser> _userManager { get; }
         private SignInManager<AppUser> _signInManager { get; }
         private RoleManager<IdentityRole> _roleManager;
-        private IConfiguration _configuration;
+        private readonly IConfiguration _configuration;
+        private readonly AppDbContext _context;
+
 
         #region Ctor
 
         public AuthController(SignInManager<AppUser> signInManager,
             UserManager<AppUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            AppDbContext context)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _context = context;
         }
 
         #endregion
 
-        private string GenerateJWtToken(AppUser user, IList<string> userRoles)
+        //private string GenerateJWtToken(AppUser user, IList<string> userRoles)
+        //{
+
+        //    // var c = _configuration["Jwt:SigninKey"];
+        //    var tokenhandler = new JwtSecurityTokenHandler();
+        //    var key = Encoding.ASCII.GetBytes(_configuration["Jwt:SigninKey"]);
+        //    var claims = new List<Claim>(){
+        //        new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
+        //        new Claim(ClaimTypes.Name,user.UserName),
+        //       // new Claim(ClaimTypes.Email,user.Email),
+
+        //    };
+        //    if (userRoles.Count > 0)
+        //    {
+        //        claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+        //        //foreach (var role in userRoles)
+        //        //{
+
+        //        //    claims.Add(new Claim(ClaimTypes.Role, role));
+        //        //}
+        //    }
+
+
+        //    var tokenDescriptor = new SecurityTokenDescriptor()
+        //    {
+
+        //        Subject = new ClaimsIdentity(claims),
+        //        Issuer = "example.com",
+        //        Audience = "example.com",
+        //        Expires = DateTime.UtcNow.AddHours(2),//2 saat
+        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        //    };
+        //    var token = tokenhandler.CreateToken(tokenDescriptor);
+        //    return tokenhandler.WriteToken(token);
+        //}
+
+        [HttpPost("[action]")]
+        public async Task<Models.Token> RefreshTokenLogin([FromForm] string refreshToken)
         {
 
-            // var c = _configuration["Jwt:SigninKey"];
-            var tokenhandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:SigninKey"]);
-            var claims = new List<Claim>(){
-                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
-                new Claim(ClaimTypes.Name,user.UserName),
-               // new Claim(ClaimTypes.Email,user.Email),
+            var user=await _userManager.Users.FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
 
-            };
-            if (userRoles.Count > 0)
+            //User user = await _context.Users.FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+            if (user != null && user?.RefreshTokenEndDate > DateTime.Now)
             {
-                claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-                //foreach (var role in userRoles)
-                //{
+                Token.TokenHandler tokenHandler = new Token.TokenHandler(_configuration);
+                var userRoles = await _userManager.GetRolesAsync(user);
+                Models.Token token = tokenHandler.CreateAccessToken(user, userRoles);
 
-                //    claims.Add(new Claim(ClaimTypes.Role, role));
-                //}
+                user.RefreshToken = token.RefreshToken;
+                user.RefreshTokenEndDate = token.Expiration.AddMinutes(3);
+                await _context.SaveChangesAsync();
+
+                return token;
             }
-
-
-            var tokenDescriptor = new SecurityTokenDescriptor()
-            {
-
-                Subject = new ClaimsIdentity(claims),
-                Issuer = "example.com",
-                Audience = "example.com",
-                Expires = DateTime.UtcNow.AddHours(2),//2 saat
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenhandler.CreateToken(tokenDescriptor);
-            return tokenhandler.WriteToken(token);
+            return null;
         }
 
         #region Login
 
         [HttpPost]
         [Route("api/[controller]/Login")]
-        public async Task<IActionResult> Login(UserLoginVM userLogin, string ReturnUrl)
+        public async Task<Models.Token> Login(UserLoginVM userLogin)
         {
             //  await CreateRoll();
             if (ModelState.IsValid)
@@ -89,12 +116,12 @@ namespace IdentityJWT.Controllers
                 var user = await _userManager.FindByEmailAsync(userLogin.Email);
                 if (user == null)
                 {
-                    return BadRequest("Email tapılmadı");
+                    // return BadRequest("Email tapılmadı");
                 }
 
                 if (await _userManager.CheckPasswordAsync(user, userLogin.Password) == false)
                 {
-                    return BadRequest("Etibarsız parol");
+                    //   return BadRequest("Etibarsız parol");
                 }
 
                 var result =
@@ -107,14 +134,14 @@ namespace IdentityJWT.Controllers
                     //add roll
 
 
-                   //   await _userManager.AddToRoleAsync(user, RoleHelper.UserRoles.Doctor.ToString());
+                    //   await _userManager.AddToRoleAsync(user, RoleHelper.UserRoles.Doctor.ToString());
 
 
 
                     var userRoles = await _userManager.GetRolesAsync(user);
-                    var token = GenerateJWtToken(user, userRoles);
+                    //var token = GenerateJWtToken(user, userRoles);
 
-                    return Ok(new LoginResultVM() { Token = token, UserName = user.UserName });
+                    //return Ok(new LoginResultVM() { Token = token, UserName = user.UserName });
                     //if (ReturnUrl != null)
                     // {
                     //     return Redirect(ReturnUrl);
@@ -122,15 +149,33 @@ namespace IdentityJWT.Controllers
 
                     // return Redirect("/adminpanel");
                     // return RedirectToAction("index", "Home");
+
+
+
+                    //Token üretiliyor.
+                    //Token üretiliyor.
+                    Token.TokenHandler tokenHandler = new Token.TokenHandler(_configuration);
+                    Models.Token token = tokenHandler.CreateAccessToken(user, userRoles);
+
+                    //Refresh token Users tablosuna işleniyor.
+                    user.RefreshToken = token.RefreshToken;
+                    user.RefreshTokenEndDate = token.Expiration.AddMinutes(3);
+                    await _context.SaveChangesAsync();
+
+                    return token;
+                    //return null;
                 }
                 else
                 {
                     //ModelState.AddModelError(" ", "Yanlış giriş cəhdi");
-                    return BadRequest(userLogin);
+                    //return BadRequest(userLogin);
+                    return new Models.Token();
+
                 }
             }
 
-            return BadRequest(userLogin);
+            //return BadRequest(userLogin);
+            return new Models.Token();
         }
 
         #endregion

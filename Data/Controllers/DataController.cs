@@ -10,9 +10,9 @@ namespace Data.Controllers
     {
 
         [HttpGet]
+       // [Authorize]
         [Authorize(Roles = "Admin,Doctor")]
-     
-        public List<Info> Get()
+     public List<Info> Get()
         {
             return new List<Info>() { new Info("Test Data 1"), new Info("Test Data 2"), new Info("Test Data 3"), new Info("Test Data 4"), new Info("Test Data 5") };
         }
