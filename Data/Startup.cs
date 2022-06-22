@@ -1,19 +1,21 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using IdentityJWT.DAL;
-using IdentityJWT.Models;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-namespace IdentityJWT
+namespace Data
 {
     public class Startup
     {
@@ -31,46 +33,9 @@ namespace IdentityJWT
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "IdentityJWT", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Info", Version = "v1" });
             });
 
-
-
-
-
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseNpgsql(Configuration.GetConnectionString("Default"));
-
-            });
-
-            services.AddIdentity<AppUser, IdentityRole>()
-                .AddEntityFrameworkStores<AppDbContext>()
-                .AddDefaultTokenProviders();
-
-
-
-
-            services.Configure<IdentityOptions>(options =>
-            {
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 6;
-                options.Password.RequireNonAlphanumeric = false; //@ * gibi karakterler olmalı
-
-                options.Lockout.MaxFailedAccessAttempts = 15; //5 girişten sonra kilitlenioyr. 
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMilliseconds(5); //5 dk sonra açılır
-                options.Lockout.AllowedForNewUsers = true; //üsttekilerle alakalı
-
-                //options.User.AllowedUserNameCharacters = ""; //olmasını istediğiniz kesin karaterrleri yaz
-
-                options.User.RequireUniqueEmail = true; //unique emaail adresleri olsun her kullanıcının 
-
-                options.SignIn.RequireConfirmedEmail = false; //Kayıt olduktan email ile token gönderecek 
-                options.SignIn.RequireConfirmedPhoneNumber = false; //telefon doğrulaması
-            });
-            
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
@@ -81,11 +46,10 @@ namespace IdentityJWT
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = "example.com",
-                          ValidAudience = "example.com",
+                        ValidAudience = "example.com",
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:SigninKey"]))
                     };
                 });
-
 
         }
 
@@ -96,14 +60,12 @@ namespace IdentityJWT
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "IdentityJWT v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Info v1"));
             }
 
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
-            // app.UseMiddleware<JWTMiddleware>();
 
             app.UseAuthentication();
             app.UseAuthorization();
