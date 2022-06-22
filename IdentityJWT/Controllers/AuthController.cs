@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Data.Helpers;
 using IdentityJWT.Models;
 using IdentityJWT.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -40,19 +41,33 @@ namespace IdentityJWT.Controllers
 
         #endregion
 
-        private string GenerateJWtToken(AppUser user)
+        private string GenerateJWtToken(AppUser user, IList<string> userRoles)
         {
+
             // var c = _configuration["Jwt:SigninKey"];
             var tokenhandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:SigninKey"]);
+            var claims = new List<Claim>(){
+                new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
+                new Claim(ClaimTypes.Name,user.UserName),
+               // new Claim(ClaimTypes.Email,user.Email),
+
+            };
+            if (userRoles.Count > 0)
+            {
+                claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                //foreach (var role in userRoles)
+                //{
+
+                //    claims.Add(new Claim(ClaimTypes.Role, role));
+                //}
+            }
+
+
             var tokenDescriptor = new SecurityTokenDescriptor()
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                        new Claim(ClaimTypes.NameIdentifier,user.Id),
-                        new Claim(ClaimTypes.Name,user.UserName),
-                        new Claim(ClaimTypes.Email,user.Email),
-                    }),
+
+                Subject = new ClaimsIdentity(claims),
                 Issuer = "example.com",
                 Audience = "example.com",
                 Expires = DateTime.UtcNow.AddHours(2),//2 saat
@@ -68,6 +83,7 @@ namespace IdentityJWT.Controllers
         [Route("api/[controller]/Login")]
         public async Task<IActionResult> Login(UserLoginVM userLogin, string ReturnUrl)
         {
+            //  await CreateRoll();
             if (ModelState.IsValid)
             {
                 var user = await _userManager.FindByEmailAsync(userLogin.Email);
@@ -88,7 +104,15 @@ namespace IdentityJWT.Controllers
                 {
                     // await _userManager.AddClaimAsync(user, new Claim("UserRole", "Admin"));
 
-                    var token = GenerateJWtToken(user);
+                    //add roll
+
+
+                   //   await _userManager.AddToRoleAsync(user, RoleHelper.UserRoles.Doctor.ToString());
+
+
+
+                    var userRoles = await _userManager.GetRolesAsync(user);
+                    var token = GenerateJWtToken(user, userRoles);
 
                     return Ok(new LoginResultVM() { Token = token, UserName = user.UserName });
                     //if (ReturnUrl != null)
@@ -192,18 +216,18 @@ namespace IdentityJWT.Controllers
         #endregion
         #region CreateRoll
 
-        // public async Task CreateRoll()
-        // {
-        //     foreach (var UserRole in Enum.GetValues(typeof(RoleHelper.UserRoles)))
-        //     {
-        //         if (!await _roleManager.RoleExistsAsync(UserRole.ToString()))
-        //         {
-        //             await _roleManager.CreateAsync(new IdentityRole { Name = UserRole.ToString() });
-        //         }
-        //     }
-        //
-        //     Console.WriteLine("role done");
-        // }
+        private async Task CreateRoll()
+        {
+            foreach (var UserRole in Enum.GetValues(typeof(RoleHelper.UserRoles)))
+            {
+                if (!await _roleManager.RoleExistsAsync(UserRole.ToString()))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole { Name = UserRole.ToString() });
+                }
+            }
+
+            Console.WriteLine("role done");
+        }
 
         #endregion
     }
